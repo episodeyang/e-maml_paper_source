@@ -65,7 +65,9 @@ We consider the problem of exploration in meta reinforcement learning. Two new m
 %%BCS: A reminder that adding any length to this abstract is punishable by loss of tenure. 
 \end{abstract}
 
+
 \section{Introduction}
+
 Supervised learning algorithms typically have their accuracy measured against some held-out test set which did not appear at training time. A supervised learning model generalizes well if it maintains its accuracy under data that has non-trivial dissimilarity from the training data. This approach to evaluating algorithms based on their generalization ability contrasts the approach in reinforcement learning (RL), wherein there is usually no distinction between training and testing environments. Instead, an agent is trained on one environment, and results are reported on this same environment. Most RL algorithms thus favor mastery over generalization. 
 
 Meta RL is the suggestion that RL should take generalization seriously. In Meta RL, agents are evaluated on their ability to quickly master new environments at test time. Thus, a meta RL agent must not learn how to master the environments it is given, but rather it must \textit{learn how to learn} so that it can quickly train at test time. Recent advances in meta RL have introduced algorithms that are capable of generating large policy improvements at test time with minimal sample complexity requirements \cite{maml, rl2, learntorl}.   
@@ -154,11 +156,13 @@ Note that, if we only consider the term on the left, we arrive at the original M
 
 $\text{RL}^2$ optimizes (\ref{eq:objective}) by feeding multiple rollouts from multiple different MDPs into an RNN. The hope is that the RNN hidden state update $h_t = C(x_t, h_{t-1})$, will learn to act as the update function $U$. Then, performing a policy gradient update on the RNN will correspond to optimizing the meta objective (\ref{eq:objective}). 
 
-We can write the $\text{RL}^2$ update rule more explicitly in the following way. Suppose $L$ represents an RNN. Let $\text{Env}_k(a)$ be a function that takes an action, uses it to interact with the MDP representing task $k$, and returns the next observation $o$, reward $r$, and a termination flag $d$. Then we have 
+We can write the $\text{RL}^2$ update rule more explicitly in the following way. Suppose $L$ represents an RNN. Let $\text{Env}_k(a)$ be a function that takes an action, uses it to interact with the MDP representing task $k$, and returns the next observation $o$
+\footnote{$\text{RL}^2$ works well with POMDP's because the RNN is good at system-identification. This is the reason why we chose to use $o$ as in ``observation" instead of $s$ for ``state" in this formulation.}
+, reward $r$, and a termination flag $d$. Then we have 
 \begin{align}
     x_t &= \left[o_{t-1}, a_{t-1}, r_{t-1}, d_{t-1} \right] \\
-    L(h_t, x_t) &= \left[ a_t, h_{t+1}\right] \\
-    \text{Env}_k(a_t) &= \left[ o_t, r_t, d_t \right]
+    \left[ a_t, h_{t+1}\right] &= L(h_t, x_t) \\
+    \left[ o_t, r_t, d_t \right] &= \text{Env}_k(a_t)
 \end{align}
 To train this RNN, we sample $N$ MDPs from $\mathcal{M}$ and obtain $k$ rollouts for each MDP by running the MDP through the RNN as above. We then compute a policy gradient update to move the RNN parameters in a direction which maximizes the returns over the $k$ trials performed for each MDP. 
 
@@ -302,12 +306,15 @@ We considered the problem of exploration in meta reinforcement learning. Two new
 \newpage
 
 \bibliography{iclr2017_conference}
-\bibliographystyle{iclr2018_conference}
+{\bibliographystyle{iclr2018_conference}
 
 \newpage
 
 %
-\subsection{Appendix A: MAML Rewards vs number of gradient steps} 
+\section{Appendix A: MAML Rewards Vs Number of Gradient Steps} 
+
+In the experiment, only 1-step of gradient descent is done in the MAML variants. However, we have explored doing multiple steps of PPO SGD for each task. Example screenshots of multiple gradient update during training are shown below.
+
 \begin{figure}[H]
 \label{curves}
 \begin{center}
@@ -323,7 +330,65 @@ We considered the problem of exploration in meta reinforcement learning. Two new
 \end{figure} 
 
 
- 
+\section{Appendix B: E-MAML Exploration As A Choice} 
+
+The path-integral formulation of the expected reward in E-MAML is \begin{equation}
+    \mathcal L(\theta_0) = - \iint R(\tau) 
+    \cdot
+    \pi (a_i \vert s_i, U(\theta_0, R(\bar\tau), \bar\tau\sim\pi(a\vert \theta_0))) 
+    \cdot 
+    \pi(\bar a_i\,\vert \bar s_i, \theta_0) \, \mathrm{d} \tau \mathrm d \bar \tau.
+\end{equation} We can make it easier to tell the role of $U$ by re-writing the action probability $\pi$ and $U$ in type notation where \begin{equation}
+\hat\pi( {\color{red}\theta} ) 
+        :\Rightarrow \{
+                ({\color{red}\tau}) :\mathbb R^+\Rightarrow \pi(a_t \vert s_t,  {\color{red}\theta} ) 
+        \}
+\hspace{1em}\text{and}\hspace{1em}
+\hat U({\color{red}\theta_0}) :\Theta \Rightarrow U \bigg({\color{red}\theta_0}, R(\tau), \tau \sim \pi(a\vert{\color{red}\theta_0}) \bigg),
+\end{equation}
+$\hat\pi$ returns a function on trajectories $\tau \in \mathcal T$, whereas $\hat U$ takes in two more variables from it's closure, and returns an updated $\theta \in \Theta$. Using the Polish notation $@$ applied from-left-to-right, the surrogate loss could be written as
+\begin{equation}
+    \mathcal L(\theta_0) = - \iint R(\tau) 
+    \cdot
+    \left(\hat \pi \circ \hat U \right) @ \theta_0 @\bar\tau
+    \cdot 
+    \hat \pi @ \theta_0 @ \bar\tau \, \mathrm{d} \tau \mathrm d \bar \tau.
+\end{equation} In this notation, it becomes clear that you could pick any arbitrary function for the meta-update operator $\hat U$. Under this context, the update operator of choice in E-MAML (and similarly MAML) is an instance from a more general class of meta-update operators $\mathcal O$: \begin{equation}
+    \hat U_{\text{MAML}}({\color{red}\theta_0}) :\Rightarrow \text{SGD} \bigg(\mathcal L_{\text{PPO}}, \tau(\pi({\color{red}\theta_0})), {\color{red}\theta_0} \bigg) 
+\end{equation} where the class of operators it belongs to is \( \hat U_{\text{MAML}} \in \mathcal O : \{ (\Theta) :\Rightarrow \Theta \} \)
+
+So what is this PPO/VPG meta-update operator? One could argue that $U_{\text{MAML}}$ is a ``reward-maximizing" exploration strategy. The reward collected during the exploration phase is used to compute the gradient direction for $\theta_0$, which is in-turn used to update $\theta_0 \rightarrow \theta$.
+
+Then it becomes immediately obvious there are a few other operators that could also be plugged in:
+\begin{itemize}
+    \item \emph{random exploration} on a single task, where $\theta$ is perturbed randomly.
+    \item \emph{natural gradient} on a single task, where such perturbation is scaled with the inverse fisher information.
+    \item \emph{perpendicular to gradient}: Another extreme is to update the initial parameter $\theta_0$ perpendicular to the gradient direction. 
+    \item \emph{$\varepsilon$-greedy}: A middle ground between these extremes is a $\varepsilon$-greedy exploration strategy, where for $\varepsilon$ of the time the per-task exploration is done randomly, whereas for the rest of the time ($1-\varepsilon$) the gradient direction is picked.
+    \item \emph{Meta-learned Meta-Update} where the meta-update operator $U$ is learned to optimality to a specific class of tasks.
+\end{itemize}
+
+We are planning on exploring these directions in the future.
+
+% A good direction to try is to use an RNN for such update function. To place this under a context, the meta-update in E-MAML (and similarly MAML) is \[
+%     U := \text{SGD} \big(\mathcal L_{\text{PPO}}, \tau(\pi(\theta_0)), \theta_0 \big) 
+%     \rightarrow \theta,
+% \] and this could be replaced by an RNN encode \[
+%     [h_{t + 1}] = L(h_t, x_t)
+% \] where the state domain is a concatenation between the 
+% \emph{state $\bar s_t$}, 
+% \emph{action $\bar a_t$}, 
+% and
+% \emph{episode reward $\mathbf{\bar r_t}$}: \[
+%     x = \left[ \bar s_t, \bar a_t, \bar r_t \right].
+% \] Note that the bar indicates that these are sampled during the exploration step.
+
+% ideas:
+% - the null-space of the fisher information of the model
+% - the gradient diretion of the PPO update
+
+% To generate gradients to $\theta_0$, one could add a function approximator \(
+% \text{MLP}(\h_{\text{last}}) \) and have it try to learn the PPO loss. Alternatively, one could concatenate this with the final loss
 
 
 %\subsection{Meta Learning Curves Vs PPO Learning Curves for E-$\text{RL}^2$ and E-MAML}
