@@ -74,7 +74,7 @@ Meta RL is the suggestion that RL should take generalization seriously. In Meta 
 
 One key question for meta RL that has been inadequately considered by \cite{maml, rl2} is that of exploration (see \cite{schex2} for an overview of exploration in this context). A crucial step in learning to solve many environments is an initial period of exploration and system identification. Furthermore, we know that real-life agents become better at this exploratory phase with practice. Consider, for example, an individual playing an entirely new video game. They will first need to identify the objective of the game and its mechanics. Further, we would expect that individuals who have played many video games would have a significantly easier time learning new games. Similarly, we would expect a good meta RL agent to become more efficient at this exploratory period. Unfortunately, we have found existing algorithms deficient in this area. We hypothesize that this failure can at least partially be attributed to the tendency of existing algorithms to do greedy, local optimization at each step of meta-training, as discussed further below. 
 
-To address the problem of exploration in meta RL, we introduce two new algorithms: E-MAML and $\text{E-RL}^2$. It should come as no surprise that these algorithms are similar to their respective namesakes MAML and $\text{RL}^2$. The algorithms are derived by reformulating the underlying meta-learning objective to account for the impact of initial sampling on future (post-meta-updated) returns. We show that our algorithms achieve better results than MAML and $\text{RL}^2$ on two environments: a Krazy World environment we developed to benchmark meta RL, and a set of maze environments. 
+To address the problem of exploration in meta RL, we introduce two new algorithms: E-MAML and $\text{E-RL}^2$. It should come as no surprise that these algorithms are similar to their respective namesakes MAML and $\text{RL}^2$. The algorithms are derived by reformulating the underlying meta-learning objective to account for the impact of initial sampling on future (post-meta-updated) returns. We show that our algorithms achieve better results than MAML and $\text{RL}^2$ on two environments: a Krazy World environment we developed to benchmark meta RL, and a set of maze environments. In the appendix to this work, we consider a more general form of our E-MAML derivation. This more general derivation suggests several promising directions for future work on exploration in meta-learning and highlights the novelty of our contributions. 
 
 %Code for these benchmark environments, as well as code for new and faster implementations of E-MAML, MAML, $\text{E-RL}^2$, and $\text{RL}^2$ will be released upon this paper's publication. 
 
@@ -89,10 +89,10 @@ Although these algorithms offer impressive capabilities, they still often falter
 
 This paper will consider the problem of exploration in meta RL. However, it is important to note that many of the problems in meta RL can alternatively be addressed with the field of \emph{hierarchical reinforcement learning}. In hierarchical RL, a major focus is on learning primitives that can be reused and strung together. These primitives will frequently enable better exploration, since they'll often relate to better coverage over state visitation frequencies. Recent work in this direction includes \citep{feudal, optioncritic, minecraft, progressive, hrlrev, schex4}. The primary reason we consider meta learning over hierarchical RL is that we find hierarchical RL tends to focus more on defining specific architectures that should lead to hierarchical behavior, whereas meta learning instead attempts to directly optimize for these behaviors. 
 
-As for meta RL itself, the literature is spread out and goes by many different names. There exist relevant literature on life-long learning, learning to learn, continual learning, and multi-task learning. Consider for instance \cite{schex5, schex6}. These papers deal with self modifying learning machines or genetic programs. In particular, they propose that if you have a genetic program that itself modifies the underlying genetic program, you will obtain a meta-GP approach. These methods describe an extremely broad class of algorithms which could be said to encompass most meta-learning approaches with the correct interpretation. In addition to these references, we encourage the reviewer to look at the review articles \cite{lllrev, tlrev, thurn} and their citations. Most attempts to address exploration in these contexts has focused on curiosity or on a free learning phrase during training. Curiosity is addressed above, and is quite different from this work because it focuses on defining an intrinsic motivation signal, whereas we only consider better utilization of the existing reward signal. This paper's methods share more similarities with free learning phases, though our algorithm makes a more explicit connection between this phase and the more exploitative phase of training (directly incorporating this information into the gradient updates).  
+As for meta RL itself, the literature is spread out and goes by many different names. There exist relevant literature on life-long learning, learning to learn, continual learning, and multi-task learning. Consider for instance \cite{schex5, schex6}. These papers deal with self modifying learning machines or genetic programs. In particular, they propose that if you have a genetic program that itself modifies the underlying genetic program, you will obtain a meta-GP approach (see appendix B for some clarification of this approach to the the algorithms presented in this paper). These methods describe an extremely broad class of algorithms which could be said to encompass most meta-learning approaches with the correct interpretation. In addition to these references, we encourage the reviewer to look at the review articles \cite{lllrev, tlrev, thurn} and their citations. Most attempts to address exploration in these contexts has focused on curiosity or on a free learning phrase during training. Curiosity is addressed above, and is quite different from this work because it focuses on defining an intrinsic motivation signal, whereas we only consider better utilization of the existing reward signal. This paper's methods share more similarities with free learning phases, though our algorithm makes a more explicit connection between this phase and the more exploitative phase of training (directly incorporating this information into the gradient updates).  
 
 
-This paper will seek to seek to capture insights from this prior literature and apply them to recently developed algorithms. In particular, we will consider considering E-MAML and  $\text{E-RL}^2$, which build upon the existing meta learning algorithms MAML \citep{maml} and $\text{RL}^2$ \citep{rl2}. In MAML, tasks are sampled and a policy gradient update is computed for each task with respect to a fixed initial set of parameters. Subsequently, a meta update is performed where a gradient step is taken that moves the initial parameter in a direction that would have maximally benefited the average return over all of the sub-updates. Results are presented on an environment wherein a simulated ant must determine its goal direction, which changes each time a new task is sampled. In $ \text{RL}^2$, an RNN is made to ingest multiple episodes from many different MDPs and then perform a policy gradient update through the entire temporal span of the RNN. The hope is that the RNN will learn a faster RL algorithm in its memory weights. 
+This paper will seek to capture insights from this prior literature and apply them to recently developed algorithms. In particular, we will consider considering E-MAML and  $\text{E-RL}^2$, which build upon the existing meta learning algorithms MAML \citep{maml} and $\text{RL}^2$ \citep{rl2}. In MAML, tasks are sampled and a policy gradient update is computed for each task with respect to a fixed initial set of parameters. Subsequently, a meta update is performed where a gradient step is taken that moves the initial parameter in a direction that would have maximally benefited the average return over all of the sub-updates. Results are presented on an environment wherein a simulated ant must determine its goal direction, which changes each time a new task is sampled. In $ \text{RL}^2$, an RNN is made to ingest multiple episodes from many different MDPs and then perform a policy gradient update through the entire temporal span of the RNN. The hope is that the RNN will learn a faster RL algorithm in its memory weights. 
 % BCS: Does this paragraph go here? It seems kind of awkward. 
 
 
@@ -124,7 +124,9 @@ We can expand the expectation from (\ref{eq:objective}) into the integral
 \end{align} 
 The objective (\ref{eq:objective}) can be optimized by taking a derivative of this integral with respect to $\theta$ and carrying out a standard REINFORCE style analysis to obtain a tractable expression for the gradient \cite{reinforce}. \\
 \\
-One issue with this direct optimization is that it will not account for the impact of the original sampling distribution $\pi_\theta$ on the future rewards $R(\tau), \tau \sim \pi_{U(\theta)}$. We would like to account for this, because it would allow us to weight the initial samples $\bar{\tau} \sim \pi_\theta$ by the expected future returns we expect after the sampling update $R(\tau)$. We argue that optimizing for this impact will make the resulting policy more exploratory. This is because when the dependence is not accounted for, $\pi_\theta$ will collect samples that lead to the largest local improvement after $U(\theta)$. However, when the dependence is accounted for, $\pi_\theta$ will be encouraged to also collect samples that lead to good meta-updates. %%PA: I know Maruan also called the inner updates "meta-updates" but I think he should probably fix that, and we probably shouldn't call them "meta-updates" either b/c the term "meta-update" seems better to be associated with the outer gradient rather than inner
+One issue with this direct optimization is that it will not account for the impact of the original sampling distribution $\pi_\theta$ on the future rewards $R(\tau), \tau \sim \pi_{U(\theta)}$. We would like to account for this, because it would allow us to weight the initial samples $\bar{\tau} \sim \pi_\theta$ by the expected future returns we expect after the sampling update $R(\tau)$. More importantly, this extra-term reinforces particular explorative trajectories if the updated agent learn well in the end. On the contrary when this term is abscent, good exploratory behaviors will not be encouraged.
+%%GY: we can argue: This extra-term reinforces the exploratory sampling of a particular trajectory if it is good for the learning in the end. When this sampling distribution is not accounted for, there will not be such reinforcement on good exploratory behaviors.
+% We argue that optimizing for this impact will make the resulting policy more exploratory. This is because when the dependence is not accounted for, $\pi_\theta$ will collect samples that lead to the largest local improvement after $U(\theta)$. However, when the dependence is accounted for, $\pi_\theta$ will be encouraged to also collect samples that lead to good meta-updates. %%PA: I know Maruan also called the inner updates "meta-updates" but I think he should probably fix that, and we probably shouldn't call them "meta-updates" either b/c the term "meta-update" seems better to be associated with the outer gradient rather than inner %%GY: Pieter is right. I'm going to correct my wording in the appendix as well.
 
 Including this dependency can be done by writing the modified expectation as
 \begin{align}
@@ -149,7 +151,7 @@ In any case, we find ourselves wishing to find a tractable expression for the gr
 \end{aligned}
 }%
 \end{align}
-Note that, if we only consider the term on the left, we arrive at the original MAML algorithm \cite{maml}. This term encourages the agent to take update steps $U$ that achieve good final rewards. It is exploitative. The second term encourages the agent to take actions such that the eventual meta-update yields good rewards (crucially, it does not try and exploit the reward signal under its own trajectory $\bar{\tau}$). This term allows the policy to be more exploratory, as it will attempt to deliver the maximal amount of information useful for the future rewards $R(\tau)$ without worrying about its own rewards $R(\bar{\tau})$. Since this algorithm augments MAML by adding in an exploratory term, we call it E-MAML. For the experiments presented in this paper, we will assume that $U$ utilized in MAML and E-MAML is stochastic gradient descent.   
+Note that, if we only consider the term on the left, we arrive at the original MAML algorithm \cite{maml}. This term encourages the agent to take update steps $U$ that achieve good final rewards. It is exploitative. The second term encourages the agent to take actions such that the eventual meta-update yields good rewards (crucially, it does not try and exploit the reward signal under its own trajectory $\bar{\tau}$). This term allows the policy to be more exploratory, as it will attempt to deliver the maximal amount of information useful for the future rewards $R(\tau)$ without worrying about its own rewards $R(\bar{\tau})$. Since this algorithm augments MAML by adding in an exploratory term, we call it E-MAML. For the experiments presented in this paper, we will assume that $U$ utilized in MAML and E-MAML is stochastic gradient descent. However, we direct the reader to the appendix for an insightful discussion on the choice of $U$.  
 
 
 \subsection{E-$\text{RL}^2$}
@@ -179,7 +181,7 @@ Where $\chi_E$ is an indicator that returns 0 if the episode is exploratory and 
 
 To test the ability of meta RL algorithms to explore, we introduce a new environment known as Krazy World. 
 
-\begin{figure}[H]
+\begin{figure}[ht]
 \begin{center}
 \includegraphics[width=30mm]{envs/grid_0.png}\hfill
 \includegraphics[width=30mm]{envs/grid_1.png}\hfill
@@ -188,28 +190,29 @@ To test the ability of meta RL algorithms to explore, we introduce a new environ
 \caption{Three example worlds drawn from the task distribution. The agent must first perform an exploratory stage of system identification before exploiting. For example, in the leftmost grid the agent must first identify that the orange squares give +1 reward and the blue squares replenish its limited supply of energy. Further, it will need to identify that the gold squares block progress and the black square can only be passed by picking up the pink key. The agent may also want to identify that the brown squares will kill it and that it will slide over the purple squares. The other center and right worlds show these assignments will change and need to be re-identified every time a new task is drawn.} %%PA: love this figure!  Would be helpful to explicitly explain one of the three example Krazy Gridworlds, so someone seeing just the figure + caption can fully understand the game
 \end{figure} 
 
-\begin{figure}[H]
-\begin{center}
-\includegraphics[height=20mm]{envs/grid_0.png} %
-\includegraphics[height=20mm]{envs/grid_local.png}  
-\end{center}
-\caption{A comparison of local and global observations for the Krazy World environment. In the local mode, the agent only views a $3 \times 3$ grid centered about itself. In global mode, the agent views the entire environment.}
-\end{figure} 
 
 This environment has the following features: 
 \begin{enumerate}
-    \item \textbf{8 different tile types}: \emph{\textbf{Goal squares}} provide +1 reward when retrieved. The agent reaching the goal does not cause the episode to terminate, and there can be multiple goals. \emph{\textbf{Ice squares}} will be skipped over in the direction the agent is transversing. \emph{\textbf{Death squares}} will kill the agent and end the episode. \emph{\textbf{Wall squares}} act as a wall, impeding the agent's movement. \emph\textbf{Lock squares}} can only be passed once the agent has collected the corresponding key from a key square. \emph{\textbf{Teleporter squares}} transport the agent to a different teleporter square on the map. \emph{\textbf{Energy squares}} provide the agent with additional energy. If the agent runs out of energy, it can no longer move. The agent proceeds normally across \empha{\textbf{normal squares}}. 
+    \item \textbf{8 different tile types}: \emph{\textbf{Goal squares}} provide +1 reward when retrieved. The agent reaching the goal does not cause the episode to terminate, and there can be multiple goals. \emph{\textbf{Ice squares}} will be skipped over in the direction the agent is transversing. \emph{\textbf{Death squares}} will kill the agent and end the episode. \emph{\textbf{Wall squares}} act as a wall, impeding the agent's movement. \emph{\textbf{Lock squares}} can only be passed once the agent has collected the corresponding key from a key square. \emph{\textbf{Teleporter squares}} transport the agent to a different teleporter square on the map. \emph{\textbf{Energy squares}} provide the agent with additional energy. If the agent runs out of energy, it can no longer move. The agent proceeds normally across \empha{\textbf{normal squares}}. 
     \item \textbf{Ability to randomly swap color palette}: The color palette for the grid can be randomly permuted, changing the color that corresponds to each of the different tile types. The agent will thus have to identify the new system to achieve a high score. Note that in representations of the gird wherein basis vectors are used rather than images to describe the state space, each basis vector will correspond to a tile type, and permuting the colors will correspond to permuting the types of tiles these basis vectors represent. We prefer to use the basis vector representation in our experiments, as it is more sample efficient.
     \item \textbf{Ability to randomly swap dynamics}: The game's dynamics can be altered. The most naive alteration simply permutes the player's inputs and corresponding actions (issuing the command for down moves the player up etc). More complex dynamics alterations allow the agent to move multiple steps at a time in arbitrary directions, making the movement more akin to that of chess pieces. 
     \item \textbf{Local or Global Observations}: The agent's observation space can be set to some fixed number of squares around the agent, the squares in front of the agent, or the entire grid. Observations can be given as images or as a grid of basis vectors. For the case of basis vectors, each element of the grid is embedded as a basis vector that corresponds to that tile type. These embeddings are then concatenated together to form the observation proper.  We will use local observations. 
-    \end{enumerate}
     
-    A successful meta learning agent will first need to explore the environment, identifying the different tile types, color palette, and dynamics. A meta learning algorithm that cannot learn to incorporate exploration into its quick updating strategy will ultimately have insufficient data to navigate the game. We see this empirically in our experiments below. 
+    \begin{figure}[ht]
+    \begin{center}
+    \includegraphics[height=20mm]{envs/grid_0.png} %
+    \includegraphics[height=20mm]{envs/grid_local.png}  
+    \end{center}
+    \caption{A comparison of local and global observations for the Krazy World environment. In the local mode, the agent only views a $3 \times 3$ grid centered about itself. In global mode, the agent views the entire environment.}
+    \end{figure} 
+\end{enumerate}
     
+A successful meta learning agent will first need to explore the environment, identifying the different tile types, color palette, and dynamics. A meta learning algorithm that cannot learn to incorporate exploration into its quick updating strategy will ultimately have insufficient data to navigate the game. We see this empirically in our experiments below. 
+
     
 \subsection{Mazes}
 A collection of maze environments. The agent is placed at a random square within the maze and must learn to navigate the twists and turns to reach the goal square. A good exploratory agent will spend some time learning the maze's layout in a way that minimizes repetition of future mistakes. The mazes are not rendered, and consequently this task is done with state space only. The mazes are $20 \times 20$ squares large.   
-\begin{figure}[H]
+\begin{figure}[ht]
 \begin{center}
 \includegraphics[width=0.5\textwidth]{envs/maze_screenshot.png} 
 \end{center}
@@ -236,6 +239,14 @@ In this section we present the following experimental results.
 \item Three heuristic metrics for how well the algorithms explore. 
 \end{enumerate}
 
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=0.82\textwidth]{ge_curves/KrazyWorld-Learning_Curves.png} 
+\end{center}
+\caption{Meta learning curves on Krazy World. We see that -$\text{RL}^2$ is at times closest to the optimal solution of 0.6 (obtained via value iteration), but has the highest initial variance. E-MAML converges faster than MAML, although both algorithms do manage to converge. $\text{RL}^2$ has relatively poor performance and high variance. A random agent achieves a score of around 0.05 on this task.}
+\label{fig:learning-curves-0}
+\end{figure} 
+
 %Additional auxiliary results are presented in the appendix.
 
 For both Krazy World and mazes, training proceeds in the following way. First, we initialize 32 training environments and 64 test environments. Every initialized environment has a different seed. Next, we initialize our chosen meta-RL algorithm by uniformly sampling hyper-parameters from predefined ranges. Data is then collected from all 32 training environments. The meta-RL algorithm then uses this data to make a meta-update, as detailed in the algorithm section of this paper. The meta-RL algorithm is then allowed to do one training step on the 64 test environments to see how fast it can train at test time. These test environment results are recorded, 32 new tasks are sampled from the training environments, and data collection begins again. For MAML and E-MAML, training at test time means performing one VPG update at test time (see the appendix for evidence that taking only one gradient step is sufficient). For $\text{RL}^2$ and E-$\text{RL}^2$, this means running three exploratory episodes to allow the RNN memory weights time to update and then reporting the loss on the fourth and fifth episodes. For both algorithms, meta-updates are calculated with PPO \cite{ppo}. The entire process from the above paragraph is repeated from the beginning 64 times and the results are averaged to provide the final learning curves featured in this paper. 
@@ -243,14 +254,6 @@ For both Krazy World and mazes, training proceeds in the following way. First, w
 When plotting learning curves in Figure  \ref{fig:learning-curves-0} and Figure \ref{fig:learning-curves-1}, the Y axis is the reward obtained after training at test time on a set of 64 held-out test environments. The X axis is the total number of environmental time-steps the algorithm has used for training. Every time the environment advances forward by one step, this count increments by one. This is done to keep the time-scale consistent across meta-learning curves.  
 
 For Krazy World, learning curves are presented in Figure \ref{fig:learning-curves-0}. We see that E-MAML and E-$\text{RL}^2$ have the best final performance. E-MAML has the steepest initial gains for the first 10 million time-steps. Since meta-learning algorithms are often very expensive, having a steep initial ascent is quite valuable. Around 14 million training steps, E-$\text{RL}^2$ passes E-MAML for the best performance. By 25 million time-steps, E-$\text{RL}^2$ is somewhat close to the optimal solution (obtained via value iteration). However, it appears to have converged below this value. MAML delivers comparable final performance to E-MAML, suggesting that perhaps MAML also learns to explore sufficiently well on this task. However, it takes it much longer to obtain this level of performance. Finally, $\text{RL}^2$ has comparatively poor performance on this task and very high variance. When we manually examined the $\text{RL}^2$ trajectories to figure out why, we saw the agent consistently finding a single goal square and then refusing to explore any further. The exploration metrics presented below seem consistent with this finding. 
-
-\begin{figure}[H]
-\begin{center}
-\includegraphics[width=0.82\textwidth]{ge_curves/KrazyWorld-Learning_Curves.png} 
-\end{center}
-\caption{Meta learning curves on Krazy World. We see that -$\text{RL}^2$ is at times closest to the optimal solution of 0.6 (obtained via value iteration), but has the highest initial variance. E-MAML converges faster than MAML, although both algorithms do manage to converge. $\text{RL}^2$ has relatively poor performance and high variance. A random agent achieves a score of around 0.05 on this task.}
-\label{fig:learning-curves-0}
-\end{figure} 
 
 Learning curves for mazes are presented in Figure \ref{fig:learning-curves-1}. Here, the story is different than Krazy World. $\text{RL}^2$ and E-$\text{RL}^2$ both perform better than MAML and E-MAML. We suspect the reason for this is that RNNs are able to leverage memory, which is more important in mazes than in Krazy World. This environment carries a penalty for hitting the wall, which MAML and E-MAML discover quickly. However, it takes E-$\text{RL}^2$ and $\text{RL}^2$ much longer to discover this penalty, resulting in worse performance at the beginning of training. MAML delivers worse final performance and typically only learns how to avoid hitting the wall. $\text{RL}^2$ and E-MAML sporadically solve mazes. E-$\text{RL}^2$ manages to solve many of the mazes. 
 \begin{figure}[h]
@@ -262,27 +265,9 @@ Learning curves for mazes are presented in Figure \ref{fig:learning-curves-1}. H
 \end{figure} 
 
 
-When examining meta learning algorithms, one important metric is the update size after one learning episode. Our meta learning algorithms should have a large gap between their initial policy, which is largely exploratory, and their updated policy, which should often solve the problem entirely. For MAML, we look at the gap between the initial policy and the policy after one policy gradient step (see the appendix for information on further gradient steps). For $\text{RL}^2$, we look at the results after three exploratory episodes, which give the RNN hidden state $h$ sufficient time to update. Note that three is the number of exploratory episodes we used during training as well. These gaps are presented in \ref{fig:gaps}. 
+When examining meta learning algorithms, one important metric is the update size after one learning episode. Our meta learning algorithms should have a large gap between their initial policy, which is largely exploratory, and their updated policy, which should often solve the problem entirely. For MAML, we look at the gap between the initial policy and the policy after one policy gradient step (see the appendix for information on further gradient steps). For $\text{RL}^2$, we look at the results after three exploratory episodes, which give the RNN hidden state $h$ sufficient time to update. Note that three is the number of exploratory episodes we used during training as well. This metric shares similarities with the Jump Start metric considered in prior literature \cite{tlrev}. These gaps are presented in \ref{fig:gaps}. 
 
-
-Finally, in Figure \ref{fig:hs} we consider three heuristic metrics for measuring the exploratory ability of the meta-learners. First, we consider the fraction of tile types visited by the agent at test time. Our intuition is that good exploratory agents will visit and identify many different tile types as this should aid in optimally solving the game. Second, we consider the number of times an agent visits a death tile at test time. Agents that are efficient at exploring should visit this tile type exactly once and then avoid it. We often find that more naive agents will run into these tiles repeatedly, causing their death many times over and a sense of pity in any onlookers. Finally, we look at how many goals the agent reaches. We see that $\text{RL}^2$ tends to visit fewer goals and instead tend to stick with a strategy of finding one goal and exploiting it. Overall, we see that the exploratory algorithms achieve better performance under these metrics. 
-
-\section{Conclusion} 
-We considered the problem of exploration in meta reinforcement learning. Two new algorithms were derived and their properties were analyzed. In particular, we showed that these algorithms tend to learn more quickly and explore more efficiently than existing algorithms. It is likely that future work in this area will focus on meta-learning a curiosity signal which is robust and transfers across tasks. Perhaps this will enable meta agents which learn to explore rather than being forced to explore by mathematical trickery in their objectives. 
-
-
-\begin{figure}[H]
-\begin{center}
-\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Visited_Tile_Types-KrazyWorld.png}}\hfill
-\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Times_Died-KrazyWorld.png}}\\
-\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Goals_Found-KrazyWorld.png}}
-\end{center}
-\caption{Three heuristic metrics for exploration on Krazy World: Fraction of tile types visited during test time, number of times killed at a death square during test time, and number of goal squares visited. We see that E-MAML is consistently the most diligent algorithm at checking every tile type during test time. Beyond that, things are fuzzy with $\text{RL}^2$ and MAML both checking a majority of tile types at test time and E-$\text{RL}^2$ being sporadic in this regard. As for the number of times the death tile type was visited, we see that most algorithms start by dying in all three test episodes, and subsequently decrease to between one and two by the time they have converged. As mentioned above, $\text{RL}^2$ suffers from finding one goal and exploiting it, whereas the other algorithms regularly explore to find more goals. For the most part, the exploratory algorithms consistently deliver the best performance on these metrics. Performance on the death heuristic and the tile types found heuristic seem to indicate the meta learners are learning how to do at least some system identification.}
-\label{fig:hs}
-\end{figure} 
-
-\newpage
-\begin{figure}[H]
+\begin{figure}[h!]
 \begin{center}
 \subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Maze-RL2.png}}\hfill
 \subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Maze-E-RL2.png}}\\
@@ -297,25 +282,37 @@ We considered the problem of exploration in meta reinforcement learning. Two new
 \label{fig:gaps}
 \end{figure} 
 
-\newpage
+Finally, in Figure \ref{fig:hs} we consider three heuristic metrics for measuring the exploratory ability of the meta-learners. First, we consider the fraction of tile types visited by the agent at test time. Our intuition is that good exploratory agents will visit and identify many different tile types as this should aid in optimally solving the game. Second, we consider the number of times an agent visits a death tile at test time. Agents that are efficient at exploring should visit this tile type exactly once and then avoid it. We often find that more naive agents will run into these tiles repeatedly, causing their death many times over and a sense of pity in any onlookers. Finally, we look at how many goals the agent reaches. We see that $\text{RL}^2$ tends to visit fewer goals and instead tend to stick with a strategy of finding one goal and exploiting it. Overall, we see that the exploratory algorithms achieve better performance under these metrics. 
+
+\section{Conclusion} 
+We considered the problem of exploration in meta reinforcement learning. Two new algorithms were derived and their properties were analyzed. In particular, we showed that these algorithms tend to learn more quickly and explore more efficiently than existing algorithms. It is likely that future work in this area will focus on meta-learning a curiosity signal which is robust and transfers across tasks. Perhaps this will enable meta agents which learn to explore rather than being forced to explore by mathematical trickery in their objectives. See appendix B for more explicit discussion on possible future directions. 
+
+
+\begin{figure}[h!]
+\begin{center}
+\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Visited_Tile_Types-KrazyWorld.png}}\hfill
+\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Times_Died-KrazyWorld.png}}\\
+\subfloat{\includegraphics[width=0.49\textwidth]{ge_curves/Goals_Found-KrazyWorld.png}}
+\end{center}
+\caption{Three heuristic metrics for exploration on Krazy World: Fraction of tile types visited during test time, number of times killed at a death square during test time, and number of goal squares visited. We see that E-MAML is consistently the most diligent algorithm at checking every tile type during test time. Beyond that, things are fuzzy with $\text{RL}^2$ and MAML both checking a majority of tile types at test time and E-$\text{RL}^2$ being sporadic in this regard. As for the number of times the death tile type was visited, we see that most algorithms start by dying in all three test episodes, and subsequently decrease to between one and two by the time they have converged. As mentioned above, $\text{RL}^2$ suffers from finding one goal and exploiting it, whereas the other algorithms regularly explore to find more goals. For the most part, the exploratory algorithms consistently deliver the best performance on these metrics. Performance on the death heuristic and the tile types found heuristic seem to indicate the meta learners are learning how to do at least some system identification.}
+\label{fig:hs}
+\end{figure} 
 
 %\section*{Acknowledgements}
 %BCS: Pieter can you acknowledge our funding here.
 %Should this paper be accepted, this is where we would thank our funding agencies and a couple people for their insightful discussions. 
 
-\newpage
 
 \bibliography{iclr2017_conference}
-{\bibliographystyle{iclr2018_conference}
+\bibliographystyle{iclr2018_conference}
 
-\newpage
+% \newpage
 
-%
 \section{Appendix A: MAML Rewards Vs Number of Gradient Steps} 
 
 In the experiment, only 1-step of gradient descent is done in the MAML variants. However, we have explored doing multiple steps of PPO SGD for each task. Example screenshots of multiple gradient update during training are shown below.
 
-\begin{figure}[H]
+\begin{figure}[t]
 \label{curves}
 \begin{center}
 \includegraphics[scale=0.16]{bradly_curves/emaml-5-0.png}%
@@ -341,7 +338,7 @@ The path-integral formulation of the expected reward in E-MAML is \begin{equatio
 \end{equation} We can make it easier to tell the role of $U$ by re-writing the action probability $\pi$ and $U$ in type notation where \begin{equation}
 \hat\pi( {\color{red}\theta} ) 
         :\Rightarrow \{
-                ({\color{red}\tau}) :\mathbb R^+\Rightarrow \pi(a_t \vert s_t,  {\color{red}\theta} ) 
+                (\tau) :\mathbb R^+\Rightarrow \pi(a_t \vert s_t,  {\color{red}\theta} ) 
         \}
 \hspace{1em}\text{and}\hspace{1em}
 \hat U({\color{red}\theta_0}) :\Theta \Rightarrow U \bigg({\color{red}\theta_0}, R(\tau), \tau \sim \pi(a\vert{\color{red}\theta_0}) \bigg),
@@ -353,11 +350,11 @@ $\hat\pi$ returns a function on trajectories $\tau \in \mathcal T$, whereas $\ha
     \left(\hat \pi \circ \hat U \right) @ \theta_0 @\bar\tau
     \cdot 
     \hat \pi @ \theta_0 @ \bar\tau \, \mathrm{d} \tau \mathrm d \bar \tau.
-\end{equation} In this notation, it becomes clear that you could pick any arbitrary function for the meta-update operator $\hat U$. Under this context, the update operator of choice in E-MAML (and similarly MAML) is an instance from a more general class of meta-update operators $\mathcal O$: \begin{equation}
-    \hat U_{\text{MAML}}({\color{red}\theta_0}) :\Rightarrow \text{SGD} \bigg(\mathcal L_{\text{PPO}}, \tau(\pi({\color{red}\theta_0})), {\color{red}\theta_0} \bigg) 
+\end{equation} In this notation, it becomes clear that you could pick any arbitrary function for the inner-update operator $\hat U$. Under this context, the update operator of choice in E-MAML (and similarly MAML) is an instance from a more general class of exploratory operators $\mathcal O$: \begin{equation}
+    \hat U_{\text{MAML}}({\color{red}\theta_0}):\Theta \Rightarrow \text{SGD} \bigg(\mathcal L_{\text{PPO}}, \tau(\pi({\color{red}\theta_0})), {\color{red}\theta_0} \bigg) 
 \end{equation} where the class of operators it belongs to is \( \hat U_{\text{MAML}} \in \mathcal O : \{ (\Theta) :\Rightarrow \Theta \} \)
 
-So what is this PPO/VPG meta-update operator? One could argue that $U_{\text{MAML}}$ is a ``reward-maximizing" exploration strategy. The reward collected during the exploration phase is used to compute the gradient direction for $\theta_0$, which is in-turn used to update $\theta_0 \rightarrow \theta$.
+So what is this PPO/VPG update operator? One could argue that $U_{\text{MAML}}$ is a ``reward-maximizing" exploration strategy. The reward collected during the exploration phase is used to compute the gradient direction for $\theta_0$, which is in-turn used to update $\theta_0 \rightarrow \theta$.
 
 Then it becomes immediately obvious there are a few other operators that could also be plugged in:
 \begin{itemize}
@@ -365,12 +362,13 @@ Then it becomes immediately obvious there are a few other operators that could a
     \item \emph{natural gradient} on a single task, where such perturbation is scaled with the inverse fisher information.
     \item \emph{perpendicular to gradient}: Another extreme is to update the initial parameter $\theta_0$ perpendicular to the gradient direction. 
     \item \emph{$\varepsilon$-greedy}: A middle ground between these extremes is a $\varepsilon$-greedy exploration strategy, where for $\varepsilon$ of the time the per-task exploration is done randomly, whereas for the rest of the time ($1-\varepsilon$) the gradient direction is picked.
-    \item \emph{Meta-learned Meta-Update} where the meta-update operator $U$ is learned to optimality to a specific class of tasks.
+    \item \emph{Meta-learned Exploratory Operator} where the inner-update operator $U$ is learned to optimality to a specific class of tasks. See \cite{schex5, schex6}.
+    \item \emph{Distraction-free Learning} where the sign of the explorative log probability is flipped. This should discourage exploratory behavior. This could be useful in a life-long learning agent during test time, where exploration is extremely costly.
 \end{itemize}
 
 We are planning on exploring these directions in the future.
 
-% A good direction to try is to use an RNN for such update function. To place this under a context, the meta-update in E-MAML (and similarly MAML) is \[
+% A good direction to try is to use an RNN for such update function. To place this under a context, the inner-update in E-MAML (and similarly MAML) is \[
 %     U := \text{SGD} \big(\mathcal L_{\text{PPO}}, \tau(\pi(\theta_0)), \theta_0 \big) 
 %     \rightarrow \theta,
 % \] and this could be replaced by an RNN encode \[
